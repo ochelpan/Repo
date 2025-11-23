@@ -1,5 +1,11 @@
 clear;
-% parpool(4); % Create a parallel pool with 3 workers
+
+%% Initial conditions
+parameters_spin;
+disp('start')
+
+if DO_PARALLEL==0
+    % parpool(4); % Create a parallel pool with 3 workers
 p = gcp('nocreate'); % Get current parallel pool without creating a new one
 if isempty(p)
     % If no pool exists, create a new one with 4 workers
@@ -9,12 +15,7 @@ else
     delete(p);
     parpool(4);
 end
-
-%% Initial conditions
-parameters_spin;
-disp('start')
-
-
+end
 
 gamma_d=1;
 pump_rates=1;%[0.1:0.1:1,2:1:5,10:5:25,50:25:100];
@@ -58,6 +59,9 @@ coeff_l=D_l;
 mask_l=sqrt(abs(coeff_l));
 
 else
+
+
+
 
 Gamma_p=W*ones(N);%can be correlated/local/collective spin pump
 % Gamma_p=W*ones(N);
