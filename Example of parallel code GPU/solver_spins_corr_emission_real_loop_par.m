@@ -65,8 +65,11 @@ sigma_z_0=sz_0;
 
 
 %% preparation
-rng('shuffle','v5normal');
-
+if DO_PARALLEL
+    gpurng('shuffle');
+else
+    rng('shuffle','v5normal');
+end
 %initial conditions in steady state 
 sx(1:N,1:ncopies,1)=2*real(sigma_m_0);
 sy(1:N,1:ncopies,1)=2*imag(sigma_m_0);
@@ -202,22 +205,35 @@ close all;
 
 if DO_PARALLEL
 t=gather(t);
-s_m=gather(s_m);
-s_z=gather(s_z);
-s_mp=gather(s_mp);
-s_zp=gather(s_zp);
 end
 
 for j=1:ncopies
-% i think i need to save these data in ncopies files for N spins each
-% separately
+idx=Nrep*(j-1)+indx_par;
+
+
+if DO_PARALLEL
+    S_m  = gather(s_m(:,j,:));
+    S_z  = gather(s_z(:,j,:));
+    S_mp = gather(s_mp(:,j,:));
+    S_zp = gather(s_zp(:,j,:));
+
+    S_m  = reshape(S_m,  [N,Mev]);
+    S_z  = reshape(S_z,  [N,Mev]);
+    S_mp = reshape(S_mp, [N,Mev]);
+    S_zp = reshape(S_zp, [N,Mev]);
+
+    name_file=strcat(foldername_date, strcat('/data_',num2str(idx),'.mat'));
+save(name_file,'t','S_m', 'S_z', 'S_mp','S_zp','sigma_m_0')
+
+else
+
 S_m=reshape(s_m(:,j,:),[N,Mev]);
 S_z=reshape(s_z(:,j,:),[N,Mev]);
 S_mp=reshape(s_mp(:,j,:),[N,Mev]);
 S_zp=reshape(s_zp(:,j,:),[N,Mev]);
-idx=Nrep*(j-1)+indx_par;
 name_file=strcat(foldername_date, strcat('/data_',num2str(idx),'.mat'));
 save(name_file,'t','S_m', 'S_z', 'S_mp','S_zp','sigma_m_0')
+end
 end
 
 
