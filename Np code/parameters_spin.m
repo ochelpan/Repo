@@ -3,12 +3,12 @@ foldername_date=strcat('/Users/oksanachelpanova/Matlab_code/parallel_code/');
 [status, msg, msgID] = mkdir(foldername_date); % create folder to save data if it does not exist
 
 DO_PARALLEL=0; % set to 1 if tun on GPU
-ncopies=3; %doing calculations in bunches 
-Nrep=1000;
+ncopies=4; %doing calculations in bunches 
+Nrep=10;
 Ntrc=ncopies*Nrep;%number of realizations
 
 
-N=10; % number of spins
+N=20; % number of spins
 omega0=0.; % level splitting
 Omega=0.0;% coherent drive
 
@@ -25,7 +25,7 @@ is_simplified=0; %  we treat spins as fields and total spin is preserved
 theta=0.;%1e-2;%pi/2;
 phi=0.;%1e-1;
 
-tau0=1e-3;% duration of the steady state preparation 
+tau0=10.;% duration of the steady state preparation 
 t_in=0.; %initial time
 
  t_fin=5.;%finite time 

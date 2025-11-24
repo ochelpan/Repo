@@ -1,10 +1,9 @@
-function []= solver_spins_corr_emission_real_loop_par(J_l,Gamma_l,V_l,mask_l,J_p,Gamma_p,V_p,mask_p,Eps,indx_par)
+function []= solver_spins_corr_emission_real_loop_par(J_l,Gamma_l,V_l,mask_l,J_p,Gamma_p,V_p,mask_p,Eps,indx_par,Alpha)
 % Here we evalute dynamics for a single trajectory
 parameters_spin;
 %% trying spherical mid_point method
 %output folder to save intermediate results
 % foldername_date=strcat('/Users/oksanachelpanova/Matlab_code/parallel_code/');
-[status, msg, msgID] = mkdir(foldername_date); % create folder to save data if it does not exist
 
 % gamma_d=Gamma;
 % gamma_u=W;
@@ -15,22 +14,22 @@ if DO_PARALLEL
  sx0= (2*randi([0, 1], [N,ncopies],'gpuArray')-1);
  sy0=(2*randi([0, 1], [N,ncopies],'gpuArray')-1);
  sz0=ones(N,ncopies,'gpuArray');
- S_m(1:L,1:Mev)=zeros(N,ncopies,Mev,'gpuArray');
-    S_z(1:L,1:Mev)=zeros(N,ncopies,Mev,'gpuArray');
-S_mp(1:L,1:Mev)=zeros(N,ncopies,Mev,'gpuArray');
-S_zp(1:L,1:Mev)=zeros(N,ncopies,Mev,'gpuArray');
-t(1:Mev)=zeros(1,Mev,'gpuArray');
+ s_m=zeros(N,ncopies,Mev,'gpuArray');
+ s_z=zeros(N,ncopies,Mev,'gpuArray');
+s_mp=zeros(N,ncopies,Mev,'gpuArray');
+s_zp=zeros(N,ncopies,Mev,'gpuArray');
+t=zeros(1,Mev,'gpuArray');
 
 else
     % L=N;
-    sx0= (2*randi([0, 1], [N,ncopies],'double')-1);
- sy0=(2*randi([0, 1], [N,ncopies,'double'])-1);
- sz0=ones(N,ncopies,1,'double');
-S_m(1:L,1:Mev)=zeros(N,ncopies,Mev,'double');
-S_z(1:L,1:Mev)=zeros(N,ncopies,Mev,'double');
-S_mp(1:L,1:Mev)=zeros(N,ncopies,Mev,'double');
-S_zp(1:L,1:Mev)=zeros(N,ncopies,Mev,'double');
-t(1:Mev)=zeros(1,Mev,'double');
+    sx0= (2*randi([0, 1], [N,ncopies])-1);
+ sy0=(2*randi([0, 1], [N,ncopies])-1);
+ sz0=ones(N,ncopies,1);
+s_m=zeros(N,ncopies,Mev);
+s_z=zeros(N,ncopies,Mev);
+s_mp=zeros(N,ncopies,Mev);
+s_zp=zeros(N,ncopies,Mev);
+t=zeros(1,Mev);
 
 end
 
@@ -47,7 +46,7 @@ sm=(sx-1i*sy)/2;
 % in this code, I am interested in the steady state properties of the
 % results. This function does evolve system for time tau0 to prepare it 
 % in steady state. 
-[sm_0,sz_0] =  solver_spins_corr_emission_real_loop_prep(sm',sz',J_l,Gamma_l,V_l,mask_l,J_p,Gamma_p,V_p,mask_p);
+[sm_0,sz_0] =  solver_spins_corr_emission_real_loop_prep(sm,sz,J_l,Gamma_l,V_l,mask_l,J_p,Gamma_p,V_p,mask_p);
 %initial conditions
 sigma_m_0=sm_0;
 sigma_z_0=sz_0;
@@ -65,12 +64,15 @@ sigma_z_0=sz_0;
 
 
 %% preparation
-rng('shuffle','v5normal');
-
+if DO_PARALLEL
+    gpurng('shuffle');
+else
+    rng('shuffle','v5normal');
+end
 %initial conditions in steady state 
-sx(1:L,1)=2*real(sigma_m_0);
-sy(1:L,1)=2*imag(sigma_m_0);
-sz(1:L,1)=sigma_z_0;
+sx(1:N,1:ncopies,1)=2*real(sigma_m_0);
+sy(1:N,1:ncopies,1)=2*imag(sigma_m_0);
+sz(1:N,1:ncopies,1)=sigma_z_0;
 
 % a bit rotated initial conditions to evaluate dynamical responce.
 % it is used to calculate two-time correlation function
@@ -78,34 +80,37 @@ sx_p=(sx*cos(Eps)-sy*sin(Eps));
 sy_p=(sx*sin(Eps)+sy*cos(Eps));
 sz_p=sz;
 
+mask_l=is_noise*mask_l;
+mask_p=is_noise*mask_p;
+
 for m=2:M
     mu=mu+1;
 % noise that comes from the correlated loss  
 if DO_PARALLEL
-noise_gamma_d_diag1=is_noise*mask_l.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
-noise_gamma_d_diag2=is_noise*mask_l.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
-Gamma_l=is_noise*Gamma_l;
+noise_gamma_d_diag1=mask_l.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
+noise_gamma_d_diag2=mask_l.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
+% Gamma_l=is_noise*Gamma_l;
 noiseGammaPrev_real_d=(noise_gamma_d_diag1.'*V_l).';
 noiseGammaPrev_imag_d=(noise_gamma_d_diag2.'*V_l).';
 
 % noise that comes from correlated pump
-noise_gamma_p_diag1=is_noise*mask_p.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
-noise_gamma_p_diag2=is_noise*mask_p.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
-Gamma_p=is_noise*Gamma_p;
+noise_gamma_p_diag1=mask_p.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
+noise_gamma_p_diag2=mask_p.*(randn(N,ncopies,'gpuArray'))*sqrt(dt); % noise in diagonal basis
+% Gamma_p=is_noise*Gamma_p;
 noiseGammaPrev_real_p=(noise_gamma_p_diag1.'*V_p).';
 noiseGammaPrev_imag_p=(noise_gamma_p_diag2.'*V_p).';
 else
 
-noise_gamma_d_diag1=is_noise*mask_l.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
-noise_gamma_d_diag2=is_noise*mask_l.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
-Gamma_l=is_noise*Gamma_l;
+noise_gamma_d_diag1=mask_l.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
+noise_gamma_d_diag2=mask_l.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
+% Gamma_l=is_noise*Gamma_l;
 noiseGammaPrev_real_d=(noise_gamma_d_diag1.'*V_l).';
 noiseGammaPrev_imag_d=(noise_gamma_d_diag2.'*V_l).';
 
 % noise that comes from correlated pump
-noise_gamma_p_diag1=is_noise*mask_p.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
-noise_gamma_p_diag2=is_noise*mask_p.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
-Gamma_p=is_noise*Gamma_p;
+noise_gamma_p_diag1=mask_p.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
+noise_gamma_p_diag2=mask_p.*(randn(N,ncopies))*sqrt(dt); % noise in diagonal basis
+% Gamma_p=is_noise*Gamma_p;
 noiseGammaPrev_real_p=(noise_gamma_p_diag1.'*V_p).';
 noiseGammaPrev_imag_p=(noise_gamma_p_diag2.'*V_p).';
 end
@@ -183,11 +188,11 @@ end
     sz_p=sz_new_p;
 
     if mu==adjust_mu
-       S_m(1:N,1:ncopies,n)= 0.5*(sx-1i*sy);
-       S_z(1N,ncopies,n)= sz;
+       s_m(1:N,1:ncopies,n)= 0.5*(sx-1i*sy);
+       s_z(1:N,1:ncopies,n)= sz;
 
-       S_mp(1:L,n)= 0.5*(sx_p-1i*sy_p);
-       S_zp(1:L,n)= sz_p;
+       s_mp(1:N,1:ncopies,n)= 0.5*(sx_p-1i*sy_p);
+       s_zp(1:N,1:ncopies,n)= sz_p;
 
        t(n)=t_in+(m-1)*dt;
 
@@ -202,15 +207,36 @@ close all;
 
 if DO_PARALLEL
 t=gather(t);
-S_m=gather(S_m);
-S_z=gather(S_z);
-S_mp=gather(S_mp);
-S_zp=gather(S_zp);
-for j=1:ncopies
-% i think i need to save these data in ncopies files for N spins each
-% separately
 end
-name_file=strcat(foldername_date, strcat('/data_',num2str(indx_par),'.mat'));
+
+for j=1:ncopies
+idx=Nrep*(j-1)+indx_par;
+
+
+if DO_PARALLEL
+    S_m  = gather(s_m(:,j,:));
+    S_z  = gather(s_z(:,j,:));
+    S_mp = gather(s_mp(:,j,:));
+    S_zp = gather(s_zp(:,j,:));
+
+    S_m  = reshape(S_m,  [N,Mev]);
+    S_z  = reshape(S_z,  [N,Mev]);
+    S_mp = reshape(S_mp, [N,Mev]);
+    S_zp = reshape(S_zp, [N,Mev]);
+
+    name_file=strcat(foldername_date, strcat('/data_',num2str(idx),'.mat'));
 save(name_file,'t','S_m', 'S_z', 'S_mp','S_zp','sigma_m_0')
+
+else
+
+S_m=reshape(s_m(:,j,:),[N,Mev]);
+S_z=reshape(s_z(:,j,:),[N,Mev]);
+S_mp=reshape(s_mp(:,j,:),[N,Mev]);
+S_zp=reshape(s_zp(:,j,:),[N,Mev]);
+name_file=strcat(foldername_date, strcat('/data_',num2str(idx),'.mat'));
+save(name_file,'t','S_m', 'S_z', 'S_mp','S_zp','sigma_m_0')
+end
+end
+
 
 end

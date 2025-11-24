@@ -1,4 +1,4 @@
-function []= solver_spins_corr_emission_real_loop_par(J_l,Gamma_l,V_l,mask_l,J_p,Gamma_p,V_p,mask_p,Eps,indx_par)
+function []= solver_spins_corr_emission_real_loop_par(J_l,Gamma_l,V_l,mask_l,J_p,Gamma_p,V_p,mask_p,Eps,indx_par,Np)
 % Here we evalute dynamics for a single trajectory
 parameters_spin;
 %% trying spherical mid_point method
