@@ -121,6 +121,10 @@ mask_p=is_noise*mask_p;
     noise_imag_p = permute(noise_imag_p,[2 1 3]);
 
 knoise=1;
+   Aa11=@(x,y,z)-2*omega0*y+z.*(J_l*y)+0.5*z.*(Gamma_l*x)+z.*(J_p*y)-0.5*z.*(Gamma_p*x);
+    Aa12=@(x,y,z)2*omega0*x-2*Omega*z-z.*(J_l*x)+0.5*z.*(Gamma_l*y)-z.*(J_p*x)-0.5*z.*(Gamma_p*y);
+    Aa13=@(x,y,z)2*Omega*y+y.*(J_l*x)-x.*(J_l*y)-0.5*real(x.*(Gamma_l*x)+y.*(Gamma_l*y)) +y.*(J_p*x)-x.*(J_p*y)+0.5*real(x.*(Gamma_p*x)+y.*(Gamma_p*y));
+
 
 for m=2:M
     mu=mu+1;
@@ -187,14 +191,25 @@ knoise=1;
  %% previous step
 
  %dissipative dynamics 
-    A11=-2*omega0*sy+sz.*(J_l*sy)+0.5*sz.*(Gamma_l*sx)+sz.*(J_p*sy)-0.5*sz.*(Gamma_p*sx);
-    A12=2*omega0*sx-2*Omega*sz-sz.*(J_l*sx)+0.5*sz.*(Gamma_l*sy)-sz.*(J_p*sx)-0.5*sz.*(Gamma_p*sy);
-    A13=2*Omega*sy+sy.*(J_l*sx)-sx.*(J_l*sy)-0.5*real(sx.*(Gamma_l*sx)+sy.*(Gamma_l*sy)) +sy.*(J_p*sx)-sx.*(J_p*sy)+0.5*real(sx.*(Gamma_p*sx)+sy.*(Gamma_p*sy));
-   % dissipative dynamics for shifted initial conditions
-    A11_p=-2*omega0*sy_p+sz_p.*(J_l*sy_p)+0.5*sz_p.*(Gamma_l*sx_p)+sz_p.*(J_p*sy_p)-0.5*sz_p.*(Gamma_p*sx_p);
-    A12_p=2*omega0*sx_p-2*Omega*sz_p-sz_p.*(J_l*sx_p)+0.5*sz_p.*(Gamma_l*sy_p)-sz_p.*(J_p*sx_p)-0.5*sz_p.*(Gamma_p*sy_p);
-    A13_p=2*Omega*sy_p+sy_p.*(J_l*sx_p)-sx_p.*(J_l*sy_p)-0.5*real(sx_p.*(Gamma_l*sx_p)+sy_p.*(Gamma_l*sy_p)) +sy_p.*(J_p*sx_p)-sx_p.*(J_p*sy_p)+0.5*real(sx_p.*(Gamma_p*sx_p)+sy_p.*(Gamma_p*sy_p));
-    
+   %  A11=-2*omega0*sy+sz.*(J_l*sy)+0.5*sz.*(Gamma_l*sx)+sz.*(J_p*sy)-0.5*sz.*(Gamma_p*sx);
+   %  A12=2*omega0*sx-2*Omega*sz-sz.*(J_l*sx)+0.5*sz.*(Gamma_l*sy)-sz.*(J_p*sx)-0.5*sz.*(Gamma_p*sy);
+   %  A13=2*Omega*sy+sy.*(J_l*sx)-sx.*(J_l*sy)-0.5*real(sx.*(Gamma_l*sx)+sy.*(Gamma_l*sy)) +sy.*(J_p*sx)-sx.*(J_p*sy)+0.5*real(sx.*(Gamma_p*sx)+sy.*(Gamma_p*sy));
+   % % dissipative dynamics for shifted initial conditions
+   %  A11_p=-2*omega0*sy_p+sz_p.*(J_l*sy_p)+0.5*sz_p.*(Gamma_l*sx_p)+sz_p.*(J_p*sy_p)-0.5*sz_p.*(Gamma_p*sx_p);
+   %  A12_p=2*omega0*sx_p-2*Omega*sz_p-sz_p.*(J_l*sx_p)+0.5*sz_p.*(Gamma_l*sy_p)-sz_p.*(J_p*sx_p)-0.5*sz_p.*(Gamma_p*sy_p);
+   %  A13_p=2*Omega*sy_p+sy_p.*(J_l*sx_p)-sx_p.*(J_l*sy_p)-0.5*real(sx_p.*(Gamma_l*sx_p)+sy_p.*(Gamma_l*sy_p)) +sy_p.*(J_p*sx_p)-sx_p.*(J_p*sy_p)+0.5*real(sx_p.*(Gamma_p*sx_p)+sy_p.*(Gamma_p*sy_p));
+   % 
+
+    A11=Aa11(sx,sy,sz);
+    A12=Aa12(sx,sy,sz);
+    A13=Aa13(sx,sy,sz);
+    % dissipative dynamics for shifted initial conditions
+    % A11_p=-2*omega0*sy_p+sz_p.*(J_l*sy_p)+0.5*sz_p.*(Gamma_l*sx_p)+sz_p.*(J_p*sy_p)-0.5*sz_p.*(Gamma_p*sx_p);
+    % A12_p=2*omega0*sx_p-2*Omega*sz_p-sz_p.*(J_l*sx_p)+0.5*sz_p.*(Gamma_l*sy_p)-sz_p.*(J_p*sx_p)-0.5*sz_p.*(Gamma_p*sy_p);
+    % A13_p=2*Omega*sy_p+sy_p.*(J_l*sx_p)-sx_p.*(J_l*sy_p)-0.5*real(sx_p.*(Gamma_l*sx_p)+sy_p.*(Gamma_l*sy_p)) +sy_p.*(J_p*sx_p)-sx_p.*(J_p*sy_p)+0.5*real(sx_p.*(Gamma_p*sx_p)+sy_p.*(Gamma_p*sy_p));
+    A11_p=Aa11(sx_p,sy_p,sz_p);
+    A12_p=Aa12(sx_p,sy_p,sz_p);
+    A13_p=Aa13(sx_p,sy_p,sz_p);
     %% new step predictor
     sx_tilde=sx+A11*dt+noiseGammaPrev_imag_d.*sz-noiseGammaPrev_imag_p.*sz;
     sy_tilde=sy+A12*dt+noiseGammaPrev_real_d.*sz-noiseGammaPrev_real_p.*sz;
@@ -206,25 +221,38 @@ knoise=1;
 
     for i=1:n_iter
         
+        sx_mid=0.5*(sx+sx_tilde);
+        sy_mid=0.5*(sy+sy_tilde);
+        sz_mid=0.5*(sz+sz_tilde);
+
+        sx_mid_p=0.5*(sx_p+sx_tilde_p);
+        sy_mid_p=0.5*(sy_p+sy_tilde_p);
+        sz_mid_p=0.5*(sz_p+sz_tilde_p);
 % dissipative dynamics for estimated state at time m
-    A11_tilde=-2*omega0*sy_tilde+sz_tilde.*(J_l*sy_tilde)+0.5*sz_tilde.*(Gamma_l*sx_tilde)+sz_tilde.*(J_p*sy_tilde)-0.5*sz_tilde.*(Gamma_p*sx_tilde);
-    A12_tilde=2*omega0*sx_tilde-2*Omega*sz_tilde-sz_tilde.*(J_l*sx_tilde)+0.5*sz_tilde.*(Gamma_l*sy_tilde)-sz_tilde.*(J_p*sx_tilde)-0.5*sz_tilde.*(Gamma_p*sy_tilde);
-    A13_tilde=2*Omega*sy_tilde+sy_tilde.*(J_l*sx_tilde)-sx_tilde.*(J_l*sy_tilde)-0.5*real(sx_tilde.*(Gamma_l*sx_tilde)+sy_tilde.*(Gamma_l*sy_tilde)) +sy_tilde.*(J_p*sx_tilde)-sx_tilde.*(J_p*sy_tilde)+0.5*real(sx_tilde.*(Gamma_p*sx_tilde)+sy_tilde.*(Gamma_p*sy_tilde));
- % the same for shifted initial conditions
-    A11_tilde_p=-2*omega0*sy_tilde_p+sz_tilde_p.*(J_l*sy_tilde_p)+0.5*sz_tilde_p.*(Gamma_l*sx_tilde_p)+sz_tilde_p.*(J_p*sy_tilde_p)-0.5*sz_tilde_p.*(Gamma_p*sx_tilde_p);
-    A12_tilde_p=2*omega0*sx_tilde_p-2*Omega*sz_tilde_p-sz_tilde_p.*(J_l*sx_tilde_p)+0.5*sz_tilde_p.*(Gamma_l*sy_tilde_p)-sz_tilde_p.*(J_p*sx_tilde_p)-0.5*sz_tilde_p.*(Gamma_p*sy_tilde_p);
-    A13_tilde_p=2*Omega*sy_tilde_p+sy_tilde_p.*(J_l*sx_tilde_p)-sx_tilde_p.*(J_l*sy_tilde_p)-0.5*real(sx_tilde_p.*(Gamma_l*sx_tilde_p)+sy_tilde_p.*(Gamma_l*sy_tilde_p)) +sy_tilde_p.*(J_p*sx_tilde_p)-sx_tilde_p.*(J_p*sy_tilde_p)+0.5*real(sx_tilde_p.*(Gamma_p*sx_tilde_p)+sy_tilde_p.*(Gamma_p*sy_tilde_p));
+    A11_tilde=Aa11(sx_mid,sy_mid,sz_mid);
+    A12_tilde=Aa12(sx_mid,sy_mid,sz_mid);
+    A13_tilde=Aa13(sx_mid,sy_mid,sz_mid);
+
+    A11_tilde_p=Aa11(sx_mid_p,sy_mid_p,sz_mid_p);
+    A12_tilde_p=Aa12(sx_mid_p,sy_mid_p,sz_mid_p);
+    A13_tilde_p=Aa13(sx_mid_p,sy_mid_p,sz_mid_p);
+ %    A12_tilde=2*omega0*sx_tilde-2*Omega*sz_tilde-sz_tilde.*(J_l*sx_tilde)+0.5*sz_tilde.*(Gamma_l*sy_tilde)-sz_tilde.*(J_p*sx_tilde)-0.5*sz_tilde.*(Gamma_p*sy_tilde);
+ %    A13_tilde=2*Omega*sy_tilde+sy_tilde.*(J_l*sx_tilde)-sx_tilde.*(J_l*sy_tilde)-0.5*real(sx_tilde.*(Gamma_l*sx_tilde)+sy_tilde.*(Gamma_l*sy_tilde)) +sy_tilde.*(J_p*sx_tilde)-sx_tilde.*(J_p*sy_tilde)+0.5*real(sx_tilde.*(Gamma_p*sx_tilde)+sy_tilde.*(Gamma_p*sy_tilde));
+ % % the same for shifted initial conditions
+    % A11_tilde_p=-2*omega0*sy_tilde_p+sz_tilde_p.*(J_l*sy_tilde_p)+0.5*sz_tilde_p.*(Gamma_l*sx_tilde_p)+sz_tilde_p.*(J_p*sy_tilde_p)-0.5*sz_tilde_p.*(Gamma_p*sx_tilde_p);
+    % A12_tilde_p=2*omega0*sx_tilde_p-2*Omega*sz_tilde_p-sz_tilde_p.*(J_l*sx_tilde_p)+0.5*sz_tilde_p.*(Gamma_l*sy_tilde_p)-sz_tilde_p.*(J_p*sx_tilde_p)-0.5*sz_tilde_p.*(Gamma_p*sy_tilde_p);
+    % A13_tilde_p=2*Omega*sy_tilde_p+sy_tilde_p.*(J_l*sx_tilde_p)-sx_tilde_p.*(J_l*sy_tilde_p)-0.5*real(sx_tilde_p.*(Gamma_l*sx_tilde_p)+sy_tilde_p.*(Gamma_l*sy_tilde_p)) +sy_tilde_p.*(J_p*sx_tilde_p)-sx_tilde_p.*(J_p*sy_tilde_p)+0.5*real(sx_tilde_p.*(Gamma_p*sx_tilde_p)+sy_tilde_p.*(Gamma_p*sy_tilde_p));
  
     
     
     %% new step predictor
-    sx_new=sx+0.5*(A11+A11_tilde)*dt+0.5*noiseGammaPrev_imag_d.*(sz+sz_tilde)-0.5*noiseGammaPrev_imag_p.*(sz+sz_tilde);
-    sy_new=sy+0.5*(A12+A12_tilde)*dt+0.5*noiseGammaPrev_real_d.*(sz+sz_tilde)-0.5*noiseGammaPrev_real_p.*(sz+sz_tilde);
-    sz_new=sz+0.5*(A13+A13_tilde)*dt-0.5*(noiseGammaPrev_real_d.*(sy+sy_tilde)+noiseGammaPrev_imag_d.*(sx+sx_tilde))+ 0.5*(noiseGammaPrev_real_p.*(sy+sy_tilde)+noiseGammaPrev_imag_p.*(sx+sx_tilde)); 
+    sx_new=sx+A11_tilde*dt+0.5*noiseGammaPrev_imag_d.*(sz+sz_tilde)-0.5*noiseGammaPrev_imag_p.*(sz+sz_tilde);
+    sy_new=sy+A12_tilde*dt+0.5*noiseGammaPrev_real_d.*(sz+sz_tilde)-0.5*noiseGammaPrev_real_p.*(sz+sz_tilde);
+    sz_new=sz+A13_tilde*dt-0.5*(noiseGammaPrev_real_d.*(sy+sy_tilde)+noiseGammaPrev_imag_d.*(sx+sx_tilde))+ 0.5*(noiseGammaPrev_real_p.*(sy+sy_tilde)+noiseGammaPrev_imag_p.*(sx+sx_tilde)); 
 
-    sx_new_p=sx_p+0.5*(A11_p+A11_tilde_p)*dt+0.5*noiseGammaPrev_imag_d.*(sz_p+sz_tilde_p)-0.5*noiseGammaPrev_imag_p.*(sz_p+sz_tilde_p);
-    sy_new_p=sy_p+0.5*(A12_p+A12_tilde_p)*dt+0.5*noiseGammaPrev_real_d.*(sz_p+sz_tilde_p)-0.5*noiseGammaPrev_real_p.*(sz_p+sz_tilde_p);
-    sz_new_p=sz_p+0.5*(A13_p+A13_tilde_p)*dt-0.5*(noiseGammaPrev_real_d.*(sy_p+sy_tilde_p)+noiseGammaPrev_imag_d.*(sx_p+sx_tilde_p))+ 0.5*(noiseGammaPrev_real_p.*(sy_p+sy_tilde_p)+noiseGammaPrev_imag_p.*(sx_p+sx_tilde_p)); 
+    sx_new_p=sx_p+A11_tilde_p*dt+0.5*noiseGammaPrev_imag_d.*(sz_p+sz_tilde_p)-0.5*noiseGammaPrev_imag_p.*(sz_p+sz_tilde_p);
+    sy_new_p=sy_p++A12_tilde_p*dt+0.5*noiseGammaPrev_real_d.*(sz_p+sz_tilde_p)-0.5*noiseGammaPrev_real_p.*(sz_p+sz_tilde_p);
+    sz_new_p=sz_p+A13_tilde_p*dt-0.5*(noiseGammaPrev_real_d.*(sy_p+sy_tilde_p)+noiseGammaPrev_imag_d.*(sx_p+sx_tilde_p))+ 0.5*(noiseGammaPrev_real_p.*(sy_p+sy_tilde_p)+noiseGammaPrev_imag_p.*(sx_p+sx_tilde_p)); 
 
     if max(abs(sz_new-sz_tilde))<epsilon_max
         if max(abs(sy_new-sy_tilde))<epsilon_max

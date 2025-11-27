@@ -12,7 +12,7 @@ N=10; % number of spins
 omega0=0.; % level splitting
 Omega=0.0;% coherent drive
 
-Eps=(1e-6); % perturbation of the steady state to calculate two-time correlation function
+Eps=(1e-3); % perturbation of the steady state to calculate two-time correlation function
 
 %% don't touch this parameter!!!
 is_noise=1;% 0 when no noise and 1 when noise is added
